@@ -2,114 +2,74 @@
 
 namespace PageWeaver;
 
+use PageWeaver\Resource\Comments;
+use PageWeaver\Resource\Deployments;
+use PageWeaver\Resource\Documents;
+use PageWeaver\Resource\Environments;
+use PageWeaver\Resource\Reviews;
+use PageWeaver\Resource\Schemas;
+use PageWeaver\Resource\ShareLinks;
+use PageWeaver\Resource\Templates;
+use PageWeaver\Resource\Usage;
+
 /**
- * Client for the PageWeaver document-generation API.
+ * The PageWeaver API client. Resources are exposed as public properties.
+ *
+ * ```php
+ * $pw = new \PageWeaver\Client('pk_live_...');
+ * $doc = $pw->documents->createAndWait(['templateId' => 'tmpl_invoice', 'payload' => ['total' => 42]]);
+ * $pdf = $pw->documents->download($doc['id']);
+ * ```
  */
 class Client
 {
     private const DEFAULT_BASE_URL = 'https://api.pageweaver.io';
-    private const TERMINAL = ['done', 'failed', 'error'];
 
-    private string $apiKey;
-    private string $baseUrl;
-    private int $timeout;
+    /** @var Documents */
+    public $documents;
+
+    /** @var Templates */
+    public $templates;
+
+    /** @var Schemas */
+    public $schemas;
+
+    /** @var Usage */
+    public $usage;
+
+    /** Anchored comment threads on documents (requires a `review`-scoped key for writes). @var Comments */
+    public $comments;
+
+    /** Review requests + approvals on documents (requires a `review`-scoped key for writes). @var Reviews */
+    public $reviews;
+
+    /** Capability-scoped external share links (requires a `review`-scoped key). @var ShareLinks */
+    public $shareLinks;
+
+    /** Named per-account environments + pins (requires a `deploy`-scoped key for writes). @var Environments */
+    public $environments;
+
+    /** Plan/apply documents-as-code deployments (requires a `deploy`-scoped key for writes). @var Deployments */
+    public $deployments;
+
+    /** @var Http */
+    private $http;
 
     public function __construct(string $apiKey, string $baseUrl = self::DEFAULT_BASE_URL, int $timeout = 30)
     {
         if ($apiKey === '') {
             throw new \InvalidArgumentException('apiKey is required');
         }
-        $this->apiKey = $apiKey;
-        $this->baseUrl = rtrim($baseUrl, '/');
-        $this->timeout = $timeout;
-    }
+        $this->http = new Http($apiKey, rtrim($baseUrl, '/'), $timeout);
 
-    /**
-     * POST /v1/documents. Pass the request body per the API docs, e.g.
-     * ['templateId' => '...', 'payload' => [...]] or ['html' => '...'].
-     *
-     * @param array<string,mixed> $body
-     * @return array<string,mixed>
-     */
-    public function createDocument(array $body): array
-    {
-        return $this->request('POST', '/v1/documents', $body);
-    }
-
-    /**
-     * GET /v1/documents/:id.
-     *
-     * @return array<string,mixed>
-     */
-    public function getDocument(string $id): array
-    {
-        return $this->request('GET', '/v1/documents/' . rawurlencode($id));
-    }
-
-    /**
-     * Create a document and poll until it reaches a terminal state.
-     *
-     * @param array<string,mixed> $body
-     * @return array<string,mixed>
-     */
-    public function createAndWait(array $body, float $pollInterval = 1.0, float $timeout = 60.0): array
-    {
-        $created = $this->createDocument($body);
-        $id = $created['id'] ?? null;
-        if (!is_string($id) || $id === '') {
-            return $created;
-        }
-        $deadline = microtime(true) + $timeout;
-        while (true) {
-            $doc = $this->getDocument($id);
-            $status = $doc['status'] ?? null;
-            if (is_string($status) && in_array($status, self::TERMINAL, true)) {
-                return $doc;
-            }
-            if (microtime(true) >= $deadline) {
-                throw new PageWeaverException("Timed out waiting for document {$id}");
-            }
-            usleep((int) ($pollInterval * 1000000));
-        }
-    }
-
-    /**
-     * @param array<string,mixed>|null $body
-     * @return array<string,mixed>
-     */
-    private function request(string $method, string $path, ?array $body = null): array
-    {
-        $ch = curl_init($this->baseUrl . $path);
-        $headers = [
-            'x-api-key: ' . $this->apiKey,
-            'Accept: application/json',
-        ];
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
-        if ($body !== null) {
-            $headers[] = 'Content-Type: application/json';
-            curl_setopt($ch, CURLOPT_POSTFIELDS, (string) json_encode($body));
-        }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-
-        $raw = curl_exec($ch);
-        if ($raw === false) {
-            $err = curl_error($ch);
-            curl_close($ch);
-            throw new PageWeaverException('HTTP request failed: ' . $err);
-        }
-        $status = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-        curl_close($ch);
-
-        $decoded = $raw === '' ? [] : json_decode((string) $raw, true);
-        if ($status < 200 || $status >= 300) {
-            throw new PageWeaverException(
-                "{$method} {$path} failed with status {$status}",
-                $status,
-                is_array($decoded) ? $decoded : $raw
-            );
-        }
-        return is_array($decoded) ? $decoded : [];
+        $this->documents = new Documents($this->http);
+        $this->templates = new Templates($this->http);
+        $this->schemas = new Schemas($this->http);
+        $this->usage = new Usage($this->http);
+        $this->comments = new Comments($this->http);
+        $this->reviews = new Reviews($this->http);
+        $this->shareLinks = new ShareLinks($this->http);
+        $this->environments = new Environments($this->http);
+        $this->deployments = new Deployments($this->http);
     }
 }
