@@ -16,5 +16,5 @@ jobs:
           php-version: ${{ matrix.php-version }}
           extensions: curl, json
       - run: composer validate
-      - run: composer install --no-interaction --prefer-dist
+      - run: composer update --no-interaction --prefer-dist
       - run: vendor/bin/phpunit
