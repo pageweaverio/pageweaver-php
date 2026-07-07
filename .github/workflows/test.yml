@@ -1,0 +1,20 @@
+name: test
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ["7.4", "8.2"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php-version }}
+          extensions: curl, json
+      - run: composer validate
+      - run: composer install --no-interaction --prefer-dist
+      - run: vendor/bin/phpunit

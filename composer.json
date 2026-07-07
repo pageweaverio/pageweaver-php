@@ -1,0 +1,22 @@
+{
+  "name": "pageweaver/sdk",
+  "description": "Official PHP SDK for the PageWeaver PDF generation API.",
+  "type": "library",
+  "license": "MIT",
+  "homepage": "https://pageweaver.io",
+  "keywords": ["pageweaver", "pdf", "pdf-generation", "html-to-pdf", "sdk", "api-client"],
+  "require": {
+    "php": ">=7.4",
+    "ext-curl": "*",
+    "ext-json": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6"
+  },
+  "autoload": {
+    "psr-4": { "PageWeaver\\": "src/" }
+  },
+  "autoload-dev": {
+    "psr-4": { "PageWeaver\\Tests\\": "tests/" }
+  }
+}
