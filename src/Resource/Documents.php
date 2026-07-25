@@ -56,6 +56,17 @@ class Documents
     }
 
     /**
+     * Fetch a document's PDF/UA-1 conformance report: the validator's verdict, every failed rule with
+     * its ISO 14289-1 clause, and what the pipeline adjusted to make the document conformant.
+     *
+     * @return array<string,mixed>
+     */
+    public function accessibility(string $id): array
+    {
+        return $this->http->json('GET', '/v1/documents/' . rawurlencode($id) . '/accessibility');
+    }
+
+    /**
      * One page of the document history, newest first. Use `nextCursor` to page.
      *
      * @param array<string,mixed> $params status, templateId, cursor, limit
