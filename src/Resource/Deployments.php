@@ -22,7 +22,8 @@ class Deployments
      * Plan a deployment: send the manifest text + the files it names + the target environment. Returns
      * `202` with the plan. Nothing is applied.
      *
-     * @param array<string,mixed> $body
+     * @param array<string,mixed> $body manifest, files, environment, and optionally `gitRepo`
+     *     (the repository the manifest came from, as `owner/name` — provenance only)
      * @return array<string,mixed>
      */
     public function plan(array $body, ?string $idempotencyKey = null): array

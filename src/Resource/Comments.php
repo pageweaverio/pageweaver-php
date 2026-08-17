@@ -68,9 +68,10 @@ class Comments
     }
 
     /**
-     * Reply on a thread. Returns `201`.
+     * Reply on a thread. Returns `201`. Pass `parentMessageId` to nest the reply under a specific
+     * prior message in the thread instead of the default flat append.
      *
-     * @param array<string,mixed> $body
+     * @param array<string,mixed> $body body, parentMessageId
      * @return array<string,mixed>
      */
     public function reply(string $id, array $body): array
